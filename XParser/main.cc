@@ -24,8 +24,11 @@ int main(int argc,char* argv[])
 
 	xmlDoc doc;
 	doc.LoadFile(str.data());
-	
-	getchar();
+
+	doc.SaveFile("xxx.xml");
+
+
+	system("Pause");
 	return 0;
 }
 
