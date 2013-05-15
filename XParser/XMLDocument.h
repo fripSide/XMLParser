@@ -9,10 +9,10 @@
 
 enum Encoding {
 	ANSI = 0,
-	UTF_8,
-	UTF8_NO_BOM,
-	UTF_16,
-	UTF_16_BIGEND,
+	UTF_8,			//multy char
+	UTF8_NO_BOM,	//multy char
+	UTF_16,        //wild char
+	UTF_16_BIGEND, //wild char
 	DEFAULT = UTF_8,
 };
 
@@ -27,7 +27,12 @@ public:
 
 private:
 	std::unique_ptr<char[]> m_buffer;
+	std::unique_ptr<wchar_t[]> m_wbuffer;
 	size_t beg;
 	size_t end; //the end of buffer
 	size_t cur; //
 };
+
+namespace Encode {
+
+}
