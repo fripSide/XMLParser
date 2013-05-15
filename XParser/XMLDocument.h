@@ -27,12 +27,15 @@ public:
 
 private:
 	std::unique_ptr<char[]> m_buffer;
-	std::unique_ptr<wchar_t[]> m_wbuffer;
 	size_t beg;
 	size_t end; //the end of buffer
 	size_t cur; //
 };
 
+
+//ignore utf16 utf32
 namespace Encode {
 
+	//dectect utf8 utf8_BOM ansi 
+	Encoding DectecEncoding(const char* str,size_t st);
 }

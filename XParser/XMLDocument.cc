@@ -31,7 +31,7 @@ bool xmlDoc::LoadFile(std::istream& in)
 	in.seekg(0,std::ios::beg);    //<--------------WTF!!!
 	
 
-	std::cout<<st<<std::endl;	//<<<<<<<debug
+	std::cout<<st<<std::endl;	//<<<<<<<<<debug : this line should be delete 
 
 	std::unique_ptr<char[]> buf(new char[st + 1]);
 	
@@ -45,7 +45,7 @@ bool xmlDoc::LoadFile(std::istream& in)
 	buf[st] = 0;
 	m_buffer = std::move(buf);
 	
-	std::cout<<m_buffer.get()<<std::endl; //<<<<<<<debug
+	std::cout<<m_buffer.get()<<std::endl; //<<<<<<<<<debug : this line should be delete 
 
 	LoadStream(m_buffer.get(),st);
 	return true;
@@ -67,4 +67,9 @@ bool xmlDoc::LoadStream(const char* str,size_t st)
 	m_buffer = std::move(buf);
 
 	return true;
+}
+
+Encoding Encode::DectecEncoding(const char* str,size_t st)
+{
+
 }

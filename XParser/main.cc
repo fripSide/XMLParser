@@ -12,14 +12,15 @@
 
 std::string GetCurPath();
 
-int main(int argc,char* argv[]) {
+int main(int argc,char* argv[]) 
+{
 
 	std::string str = GetCurPath();
-    //str = str.substr(0,str.find_last_of("\\/"));
-	//str = str.substr(0,str.find_last_of("\\/"));
+    str = str.substr(0,str.find_last_of("\\/")); //get out of debug
+	str = str.substr(0,str.find_last_of("\\/")); //get out of XParser
 	str += "\\test\\xml.txt";
 
-	std::cout << str <<std::endl; //<<<<<<<debug
+	std::cout << str <<std::endl; //<<<<<<<<<debug : this line should be delete 
 
 	xmlDoc doc;
 	doc.LoadFile(str.data());
@@ -28,7 +29,8 @@ int main(int argc,char* argv[]) {
 	return 0;
 }
 
-std::string GetCurPath() {
+std::string GetCurPath() 
+{
 	wchar_t path[MAX_PATH];
 	HMODULE hModule = GetModuleHandle(NULL);
 	GetModuleFileName(hModule,path,MAX_PATH);
