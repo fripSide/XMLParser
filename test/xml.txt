@@ -1,0 +1,21 @@
+<Contact
+    first="Michael"
+    last="Jordan"
+    city="Chicago"
+    state="Illinois"
+    postal="60612"
+/>
+<Contact
+    first="Barbara"
+    last="Jordan"
+    city="Houston"
+    state="Texas"
+    postal="77002"
+/>
+<Contact
+    first="Michael"
+    last="Dunn"
+    city="Toronto"
+    state="Ontario"
+    postal="M4R1K1"
+/>
