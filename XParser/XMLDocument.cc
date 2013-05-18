@@ -4,9 +4,9 @@
 #include <string>
 #include <algorithm>
 
-xmlDoc::xmlDoc():m_buffer(),beg(),end(),cur(),m_size()
+xmlDoc::xmlDoc():m_buffer(),beg(),end(),cur(),m_size(),errormsg(),root(new xmlElement)
 {
-
+	memset(errorstr,0,15);
 }
 
 bool xmlDoc::LoadFile(const char* filename)
@@ -97,6 +97,290 @@ bool xmlDoc::SaveFile(const char* filename, Encoding ec)
 
 	return true;
 	
+}
+
+bool xmlDoc::Parser()
+{
+	while (true) {
+		if (cur == m_size) {
+			break;
+		}
+
+		std::shared_ptr<xmlElement> cnode(new xmlElement);
+		if (!getNode(cnode)) {
+			return false;
+		}
+		root->chilarens.push_back(cnode);
+		cnode->parent = root.get();
+	}
+
+	return true;
+}
+
+void xmlDoc::Traverse(std::shared_ptr<xmlElement> rt)
+{
+	if (rt.get() != nullptr) {
+		std::cout<<rt->Print()<<std::endl;
+		for (auto tit = rt->chilarens.begin(); tit != rt->chilarens.end(); ++tit) {
+			Traverse(*tit);
+			std::cout<<(*tit)->Print()<<std::endl;
+		}
+	}
+}
+
+std::shared_ptr<xmlElement> xmlDoc::GetRoot() const
+{
+	return root;
+}
+
+void xmlDoc::skipWhiteSpace()
+{
+	while (m_buffer[cur] == ' ' && cur != m_size) {
+		++cur;
+	}
+}
+
+std::string xmlDoc::GetEororStr()
+{
+	if (errormsg.empty()) {
+		return "";
+	}
+	errormsg += "/n";
+	errormsg += errorstr;
+
+	return errormsg;
+}
+
+void xmlDoc::setErrorStr(const char* str)
+{
+	errormsg = str;
+	if (m_size - cur > 14) {
+		strncpy(errorstr,&m_buffer[cur],14);
+	} else {
+		strncpy(errorstr,&m_buffer[cur],m_size - cur);
+	}
+}
+
+//-----------------------------------------------
+//parser node
+//-----------------------------------------------
+bool xmlDoc::getNode(std::shared_ptr<xmlElement> xe)
+{
+	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
+	if (!errormsg.empty()) {
+		return false;
+	}
+
+	skipCommentAndHead();
+	
+	if (!getStartTag(xe)) { //获取标签失败或者遇到< />标签直接结束
+		return false;
+	}
+
+	while (nextIsStartTag()) { //add child node
+		std::shared_ptr<xmlElement> cnode(new xmlElement);
+		cnode->parent = xe.get();
+		xe->chilarens.push_back(cnode);
+		getNode(cnode);
+	}
+
+	getText(xe);
+	skipCommentAndHead();
+	if (getEndTag(xe) && errormsg.empty()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool xmlDoc::skipCommentAndHead() // skip coment and head <? ？>
+{
+	if (match("<?")) {
+		while (m_buffer[cur + 2] != '>' && m_buffer[cur] != '>' && cur != m_size - 2) {
+			++cur;
+		}
+		if (!match("?>")) {
+			setErrorStr("此应该出现 ?>");
+			return false;
+		}
+	}
+	
+	//skipcomment
+	while (match("<!--")) {
+		while (m_buffer[cur] != '>' && m_buffer[cur + 3] != '>' && cur != m_size - 3) {
+			++cur;
+		}
+		if (!match("-->")) {
+			setErrorStr("此处注释格式错误应为 -->");
+			return false;
+		}
+	}
+	return true;
+}
+
+bool xmlDoc::nextIsStartTag()
+{
+	skipWhiteSpace();
+	int t = cur + 1;
+	if (m_buffer[t] == '<' && m_buffer[t + 1] != '/' && m_buffer[t + 1] != '!') {
+		return true;
+	}
+
+	return false;
+}
+
+bool xmlDoc::match(const char* text)
+{
+	skipWhiteSpace();
+	int len = strlen(text);
+	if (strncmp(text,&m_buffer[cur],len) == 0) {
+		cur += len;
+		return true;
+	}
+	return false;
+}
+
+bool xmlDoc::getText(std::shared_ptr<xmlElement> xe)
+{
+	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
+	skipWhiteSpace();
+	skipCommentAndHead();
+	std::string text = "";
+	while (m_buffer[cur] != '<' && cur != m_size) {
+		text += m_buffer[cur];
+		++cur;
+	}
+
+	if (!text.empty()) {
+		xe->tagvalue = text;
+		return true;
+	}
+	return false;
+}
+
+bool xmlDoc::getStartTag(std::shared_ptr<xmlElement> xe)
+{
+	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
+	skipWhiteSpace();
+
+	
+	 
+	if (match("<")) {
+		std::string tag = "";
+		skipWhiteSpace();
+		while (m_buffer[cur] != ' ' && m_buffer[cur] != '>') {
+			tag += m_buffer[cur];
+			++cur;
+		}
+		
+		if (!tag.empty()) {
+			xe->tagname = tag;
+		}
+
+		getAttribute(xe);
+
+		if (match("/>")) { //不需要end tag
+			return false;
+		}
+		
+		if (match(">")) {
+			return true;
+		} else {
+			setErrorStr("此处应该出现 '>' ");
+			return false;
+		}
+	} else {
+		setErrorStr("此处应该出现 '<' ");
+		return false;
+	}
+	return true;
+}
+
+bool xmlDoc::getAttribute(std::shared_ptr<xmlElement> xe)
+{
+	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
+	skipWhiteSpace();
+	if (m_buffer[cur] == '>' || !errormsg.empty()) {
+		return false;
+	}
+	std::string attname = "";
+	std::string attval = "";
+
+	while (m_buffer[cur] != ' ' && m_buffer[cur] != '=') {
+		attname += m_buffer[cur];
+		++cur;
+	}
+
+	if (match("=")) {
+		if (match("\"")) { //"
+			skipWhiteSpace();
+			while (m_buffer[cur] != ' ' && m_buffer[cur] != '"') {
+				attval += m_buffer[cur];
+				++cur;
+			}
+		} else {
+			setErrorStr("此处应该出现 “");
+			return false;
+		}
+
+		if (match("\"")) {
+		} else {
+			setErrorStr("此处应该出现 ”");
+			return false;
+		}
+	} else {
+		setErrorStr("此处应该出现 =");
+		return false;
+	}
+
+	if (!attname.empty()) {
+		xe->attributes.push_back(std::make_pair(attname,attval));
+	} else {
+		return false;
+	}
+	
+	while(getAttribute(xe));
+
+	return false;
+}
+
+bool xmlDoc::getEndTag(std::shared_ptr<xmlElement> xe)
+{
+	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
+	if (match("</")) {
+		std::string endtag;
+		while (m_buffer[cur] != ' ' && m_buffer[cur] != '>') {
+			endtag += m_buffer[cur];
+			++cur;
+		}
+
+		if (endtag != xe->tagname) {
+			endtag = "结束标签应该为： " + xe->tagname;
+			setErrorStr(endtag.c_str());
+			return false;
+		}
+		skipWhiteSpace();
+
+		if (m_buffer[cur] != '>') {
+			setErrorStr("此处缺少反标签 >");
+			return false;
+		}
+		
+		return true;
+	} else {
+		setErrorStr("此处缺少结束标签 </>");
+		return false;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------
+//xmlElement
+//-----------------------------------------------
+std::string xmlElement::Print()
+{
+	return tagname;
 }
 
 //suspend to support unicode
