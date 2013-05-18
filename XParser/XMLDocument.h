@@ -101,13 +101,13 @@ class xmlElement
 {
 public:
 	friend class xmlDoc;
-	xmlElement():tagvalue(),tagname(),parent(NULL),chilarens(),needEndTag(true) {}
-	std::string  Print();
+	xmlElement():tagvalue(),tagname(),parent(NULL),childrens(),needEndTag(true) {}
+	void  Print(std::ostream& out);
 
 private:
 	bool		   needEndTag;
-	std::string    tagname;
-	std::string    tagvalue;
+	std::string    tagname; //id
+	std::string    tagvalue; //tagtext
 	std::list<std::pair<std::string,std::string>> attributes;
 
 	//std::shared_ptr<xmlElement>				 parent;
@@ -116,7 +116,7 @@ private:
 	// |___________________________________________________
 
 	xmlElement*								 parent;
-	std::vector<std::shared_ptr<xmlElement>> chilarens;
+	std::vector<std::shared_ptr<xmlElement>> childrens;
 };
 
 

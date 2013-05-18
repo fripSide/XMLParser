@@ -95,7 +95,7 @@ bool xmlDoc::SaveFile(const char* filename, Encoding ec)
 bool xmlDoc::Parser()
 {
 	std::shared_ptr<xmlElement> cnode(new xmlElement);
-	root->chilarens.push_back(cnode);
+	root->childrens.push_back(cnode);
 	cnode->parent = root.get();
 	if (!getNode(cnode)) {
 		return false;
@@ -105,13 +105,18 @@ bool xmlDoc::Parser()
 
 void xmlDoc::Traverse(std::shared_ptr<xmlElement> rt)
 {
+	std::ofstream out("testwrite.xml",std::ios::binary);
+	if (!out.is_open()) {
+		return;
+	}
+	
 	if (rt.get() != nullptr) {
-		
-		for (auto tit = rt->chilarens.begin(); tit != rt->chilarens.end(); ++tit) {
-			Traverse(*tit);
-			std::cout<<(*tit)->Print()<<std::endl;
+		for (auto tit = rt->childrens.begin(); tit != rt->childrens.end(); ++tit) {
+			(*tit)->Print(out);
 		}
 	}
+
+	out.close();
 }
 
 std::shared_ptr<xmlElement> xmlDoc::GetRoot() const
@@ -162,11 +167,9 @@ bool xmlDoc::getNode(std::shared_ptr<xmlElement> xe)
 		return true;
 	}
 
-	if (!errormsg.empty()) {
+	if (!matchnext("<") || matchnext("</") || !errormsg.empty() ) {
 		return false;
 	}
-	
-	skipCommentAndHead();
 	
 	if (!getStartTag(xe)) { //获取标签失败
 		return false;
@@ -177,31 +180,38 @@ bool xmlDoc::getNode(std::shared_ptr<xmlElement> xe)
 		std::shared_ptr<xmlElement> cnode(new xmlElement);
 		xmlElement* parent = xe->parent;
 		cnode->parent = parent;
-		parent->chilarens.push_back(cnode);
+		parent->childrens.push_back(cnode);
 		getNode(cnode);
 		return true;
 	}
 
+	bool hastext = true;
 	while (nextIsStartTag()) { //add child node
 		std::shared_ptr<xmlElement> cnode(new xmlElement);
 		cnode->parent = xe.get();
-		xe->chilarens.push_back(cnode);
+		xe->childrens.push_back(cnode);
 		getNode(cnode);
+		hastext = false;
 	}
-
-	getText(xe);
-	skipCommentAndHead();
-	if (!getEndTag(xe) || !errormsg.empty()) {
-		return false;
+	if (hastext) {
+		getText(xe);
 	}
-	++cur;
+	
+	if (matchnext("</")  || !errormsg.empty()) {
+		if (!getEndTag(xe)) {
+			return false;
+		}
+	}
+	
 	return true;
 }
 
 bool xmlDoc::skipCommentAndHead() // skip coment and head <? ？>
 {
+	while (match("/r") || match("/n") || match("/t"));
+	
 	if (match("<?")) {
-		while (m_buffer[cur + 2] != '>' && m_buffer[cur] != '>' && cur != m_size - 2) {
+		while (m_buffer[cur + 1] != '>' && m_buffer[cur] != '>' && cur != m_size - 2) {
 			++cur;
 		}
 		if (!match("?>")) {
@@ -212,7 +222,7 @@ bool xmlDoc::skipCommentAndHead() // skip coment and head <? ？>
 	
 	//skipcomment
 	while (match("<!--")) {
-		while (m_buffer[cur] != '>' && m_buffer[cur + 3] != '>' && cur != m_size - 3) {
+		while (m_buffer[cur] != '>' && m_buffer[cur + 2] != '>' && cur != m_size - 3) {
 			++cur;
 		}
 		if (!match("-->")) {
@@ -227,7 +237,7 @@ bool xmlDoc::nextIsStartTag()
 {
 	skipWhiteSpace();
 	int t = cur;
-	char c = m_buffer[t];
+	
 	if (m_buffer[t] == '<' && m_buffer[t + 1] != '/' && m_buffer[t + 1] != '!') {
 		return true;
 	}
@@ -241,6 +251,17 @@ bool xmlDoc::match(const char* text)
 	int len = strlen(text);
 	if (strncmp(text,&m_buffer[cur],len) == 0) {
 		cur += len;
+		return true;
+	}
+	return false;
+}
+
+bool xmlDoc::matchnext(const char* text)
+{
+	skipWhiteSpace();
+	skipCommentAndHead();
+	int len = strlen(text);
+	if (strncmp(text,&m_buffer[cur],len) == 0) {
 		return true;
 	}
 	return false;
@@ -267,8 +288,6 @@ bool xmlDoc::getText(std::shared_ptr<xmlElement> xe)
 bool xmlDoc::getStartTag(std::shared_ptr<xmlElement> xe)
 {
 	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
-	skipWhiteSpace();
-	 
 	if (match("<")) {
 		std::string tag = "";
 		skipWhiteSpace();
@@ -276,7 +295,8 @@ bool xmlDoc::getStartTag(std::shared_ptr<xmlElement> xe)
 			&& m_buffer[cur] != '\r'
 			&& m_buffer[cur] != '\n'
 			&& m_buffer[cur] != '\t'
-			&& m_buffer[cur] != '>') {
+			&& m_buffer[cur] != '>'
+			&& m_buffer[cur] != '/') {
 			tag += m_buffer[cur];
 			++cur;
 		}
@@ -356,9 +376,10 @@ bool xmlDoc::getAttribute(std::shared_ptr<xmlElement> xe)
 bool xmlDoc::getEndTag(std::shared_ptr<xmlElement> xe)
 {
 	assert(xe.get() != nullptr && "xmlElement不能为nullptr");
-
+	char b = m_buffer[cur -1];
 	char c = m_buffer[cur];
 	char d = m_buffer[cur + 1];
+	char e = m_buffer[cur + 2];
 	if (match("</")) {
 		
 		std::string endtag;
@@ -374,12 +395,14 @@ bool xmlDoc::getEndTag(std::shared_ptr<xmlElement> xe)
 		}
 		skipWhiteSpace();
 
-		if (m_buffer[cur] != '>') {
+		if (m_buffer[cur] == '>') {
+			++cur;
+			return true;
+		} else {
 			setErrorStr("此处缺少反标签 >");
 			return false;
 		}
 		
-		return true;
 	} else {
 		setErrorStr("此处缺少结束标签 </>");
 		return false;
@@ -391,9 +414,37 @@ bool xmlDoc::getEndTag(std::shared_ptr<xmlElement> xe)
 //-----------------------------------------------
 //xmlElement
 //-----------------------------------------------
-std::string xmlElement::Print()
+void xmlElement::Print(std::ostream& out)
 {
-	return tagname;
+	std::string reval = "<";
+	reval += tagname;
+	reval += " ";
+	for (auto mit = attributes.begin(); mit != attributes.end(); ++mit) {
+		reval += mit->first;
+		reval += "=\"";
+		reval += mit->second;
+		reval += "\" ";
+	}
+	if (!needEndTag) {
+		reval += "/>\r\n";
+		out<<reval;
+		return;
+	} else {
+		reval += ">";
+	}
+	
+	out<<reval;
+
+	for (auto citer = childrens.begin(); citer != childrens.end(); ++citer) {
+		(*citer)->Print(out);		
+	}
+	
+	reval = "";
+	reval += tagvalue;
+	reval += "</";
+	reval += tagname;
+	reval += ">\r\n";
+	out<<reval;	
 }
 
 //suspend to support unicode

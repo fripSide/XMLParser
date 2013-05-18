@@ -21,7 +21,7 @@ int main(int argc,char* argv[])
 	std::string str = GetCurPath();
     str = str.substr(0,str.find_last_of("\\/")); //get out of debug
 	str = str.substr(0,str.find_last_of("\\/")); //get out of XParser
-	str += "\\test\\xml.txt";
+	str += "\\test\\content_fmt.xml";
 
 	std::cout << str <<std::endl; //<<<<<<<<<debug : this line should be delete 
 
