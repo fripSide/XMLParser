@@ -174,13 +174,14 @@ bool xmlDoc::getNode(std::shared_ptr<xmlElement> xe)
 	if (!getStartTag(xe)) { //获取标签失败
 		return false;
 	}
-
+	
 	//遇到< />直接结束,就读下一行
 	if (!xe->needEndTag) {
 		std::shared_ptr<xmlElement> cnode(new xmlElement);
 		xmlElement* parent = xe->parent;
 		cnode->parent = parent;
 		parent->childrens.push_back(cnode);
+
 		getNode(cnode);
 		return true;
 	}
@@ -417,6 +418,7 @@ bool xmlDoc::getEndTag(std::shared_ptr<xmlElement> xe)
 void xmlElement::Print(std::ostream& out)
 {
 	std::string reval = "<";
+
 	reval += tagname;
 	reval += " ";
 	for (auto mit = attributes.begin(); mit != attributes.end(); ++mit) {

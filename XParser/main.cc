@@ -31,6 +31,7 @@ int main(int argc,char* argv[])
 	doc.SaveFile("xxx.xml");
 
 	doc.Parser();
+
 	std::shared_ptr<xmlElement> root = doc.GetRoot();
 	doc.Traverse(root);
 	system("Pause");

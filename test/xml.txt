@@ -1,4 +1,7 @@
-<Contact
+
+
+<children>
+					<Contact
     first="Michael"
     last="Jordan"
     city="Chicago"
@@ -19,8 +22,6 @@
     state="Ontario"
     postal="M4R1K1"
 />
-
-<children>
                     <topics type="attached">
                       <topic id="5l87s4is92to1e0p4f28tsvg48" timestamp="1335665202198">
                         <title>生活像一连串不可能尽到的义务</title>
